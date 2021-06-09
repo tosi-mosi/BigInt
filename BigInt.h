@@ -114,6 +114,8 @@ public:
 			std::string tmp_str{str_repr.substr(offset_from_left, count)};
 			ss << std::hex << tmp_str;
 			
+			// debug
+			std::cout << "ctor: tmp_str = " << tmp_str << '\n';
 
 			if(!(ss >> (*m_parr)[(str_payload_len-i)/hex_digs_in_one_storage_element]))
 				throw std::runtime_error("BigInt invalid input");
@@ -183,6 +185,14 @@ public:
 
 		return result;
 	}
+
+	// BigInt operator >> (const BigInt& operand) const {
+
+	// 	// result is the same as 
+	// 	if(operand > BigInt{""})
+
+	// 	return (*this)>>(operand%)
+	// }
 
 	BigInt operator<< (int operand) const {
 
