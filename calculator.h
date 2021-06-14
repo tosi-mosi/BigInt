@@ -1,5 +1,6 @@
 #include "BigInt.h"
-#include <vector>
+#include <deque>
+#include <stack>
 
 enum class OperatorId{
 	
@@ -60,6 +61,8 @@ enum class IntegerStorageType{
 enum class TokenType{
 	operatorr,
 	integer
+
+	//function
 };
 
 
@@ -87,29 +90,128 @@ public:
 		{}
 	};
 
-	struct Token{
+	class Token{
+
+	// [?] should it be public?
+	public:
+
 		TokenType mTokenType; 					// operator or identifier
 
 		Operator* mOp; 							// if token is operator,
 												//	this will be a ptr to corresponding operator obj,
 												// 	 nullptr otherwise
 		
-		std::unique_ptr<Integer> mInt;			// unique_ptr here?
+		std::shared_ptr<Integer> mInt;			// unique_ptr here?
+
+		Token(TokenType tokenType, Operator* op, std::shared_ptr<Integer> inte) :
+			mTokenType{ tokenType },
+			mOp{ op },
+			mInt{ inte }
+		{}
+
+		// Token(const Token& to_be_copied) :
+		// 	mTokenType{ to_be_copied.mTokenType },
+		// 	mOp{ to_be_copied.mOp},					// shallow copy suffices
+		// 	mInt{  }		// need deep copy here, no way around
+		// {}
+
 	};
 
-	static std::vector<Calculator<BI>::Token> mTokens;
+	static std::deque<Token> mTokens;
 
-	static bool parse(){
+	static bool calculate(std::string_view& expr){
 		// tokenize
 		// parse tokenized
+		if(!tokenize(expr))
+			return false;
+
+		if(!parse_tokenized_expr())
+			return false;
+
+		//calculate, return result
+
 	}
 
-	static bool parse_tokenized_expr(const std::string_view& expr) {
+	static bool parse_tokenized_expr() {
 
-		// if(!tokenize(expr))
-		// 	return false;
+		
 
-		// return true;
+	}
+
+	// [?] When to validate expression (), maybe when we will be evaluating 
+	// using shunting yard algorithm from WIKI
+	static bool convert_infix_to_postfix_notation(){
+
+		std::deque<Token> result;
+		std::stack<Token> operator_stack;
+
+		for(auto it{mTokens.begin()}, end{mTokens.end()}; it!=end; ++it){
+			
+			if(it->mTokenType == TokenType::integer){
+
+				result.push_back(*it);
+
+			}else if(it->mTokenType == TokenType::operatorr){
+
+				if(!operator_stack.empty()){
+					
+					Token* top_el{};
+					while(
+						!operator_stack.empty() 				// check if stack is not empty
+						&& (top_el = &operator_stack.top())		// read top element
+						&& top_el->mOp->strRepr != "("
+						&& (
+							top_el->mOp->prec > it->mOp->prec 
+							|| (top_el->mOp->prec == it->mOp->prec && top_el->mOp->assoc == OperatorAssociativity::left)
+						)
+					){
+
+						result.push_back(*top_el);
+						operator_stack.pop();
+
+					}
+				}
+				
+				operator_stack.push(*it);
+
+			}else if(it->mTokenType == TokenType::operatorr && it->mOp->strRepr == "("){
+
+				operator_stack.push(*it);
+
+			}else if(it->mTokenType == TokenType::operatorr && it->mOp->strRepr == ")"){
+
+				// if not "(" then put it to the deque
+				while(true){
+					
+					if(operator_stack.empty())
+						return false;
+
+					Token operator_inside_parentheses{ operator_stack.top() };
+
+					if(operator_inside_parentheses.mOp->strRepr != "("){
+						operator_stack.pop();
+						break;
+					}
+
+					result.push_back(operator_inside_parentheses);
+					operator_stack.pop();
+				
+				}
+			}
+		}
+
+		// Popping the remaining items from operator stack to output queue
+		while(!operator_stack.empty()){
+			if(Token tmp{ operator_stack.top() }; tmp.mOp->strRepr != "(")
+				result.push_back(operator_stack.top());
+			operator_stack.pop();
+		}
+
+		DEBUG("end of convert\n");
+
+		mTokens = result;
+
+		return true;
 	}
 
 	static std::string initializeOperationCombination(){
@@ -131,6 +233,11 @@ public:
 
         	for(auto it_a{expr.begin()}, end{expr.end()}; it_a!=end; ){
         		
+        		DEBUG("index = " 
+        			<< it_a - expr.begin() 
+        			<< ", starts_with_operator = " 
+        			<< starts_with_operator(std::string_view{it_a, end-it_a}));
+
         		//operators are delimiters, ints are meaningful entities
 				if(auto operatorId = starts_with_operator(std::string_view{it_a, end-it_a}); operatorId != -1){
 				
@@ -141,32 +248,41 @@ public:
 				
 				}else{
 				
-					size_t end_of_number_index = expr.find_first_of(operatorsCombined, it_a-expr.begin());
-					end_of_number_index = (end_of_number_index == std::string::npos) ? end-it_a : end_of_number_index;
+					// end_of_number_index = (end of number - begining_of_number)
+					size_t number_end_index = expr.find_first_of(operatorsCombined, it_a-expr.begin());
+					
+					DEBUG("br2) number_end_index = " << number_end_index);
+					
+					size_t number_str_length = (number_end_index == std::string::npos) ? end-it_a : number_end_index-(it_a-expr.begin());
+					
+					DEBUG("br2) number_str_length = " << number_str_length);
+
 					std::string_view strRepr{ 
 						it_a,
-						end_of_number_index
+						number_str_length
 					};
 
 
 					BI intRepr{strRepr};
 					mTokens.push_back(
-						Token{ TokenType::integer, nullptr,  std::make_unique<Integer>(strRepr, intRepr) }
+						Token{ TokenType::integer, nullptr,  std::make_shared<Integer>(strRepr, intRepr) }
 					);
 
-					it_a += end_of_number_index;
+					it_a += number_str_length;
 				}
 	        }
 
         }catch(std::runtime_error& e){
 
+    		// [?] handle input validation exceptions here
         	std::cout << "Aborting calculation. Reason: " << e.what() << '\n'; 
         	return false;
 
         }		
 
         for(auto& el: mTokens)
-        	std::cout << (el.mOp ? el.mOp->strRepr : el.mInt->mIntRepr.get_as_string()) << '\n'; 
+        	std::cout << (el.mOp ? el.mOp->strRepr : el.mInt->mIntRepr.get_as_string()) << ' ';
+    	std::cout << '\n'; 
 
         return true;
 	}
@@ -202,4 +318,4 @@ std::array<Operator, 7> Calculator<BI>::mOperators{
 };
 
 template<typename BI>
-std::vector<typename Calculator<BI>::Token> Calculator<BI>::mTokens{};
+std::deque<typename Calculator<BI>::Token> Calculator<BI>::mTokens{};

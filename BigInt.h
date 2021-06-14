@@ -11,6 +11,14 @@
 
 #include <iomanip> // for std::setfill("0")
 
+#ifdef DEBUG_BUILD
+#  define DEBUG(x) std::cerr << x << '\n';
+#else
+#  define DEBUG(x) do {} while (0)
+#endif
+
+// [?][solved] BUG: fasf -> it reads without throwing exception - not what I want
+
 //[TOTHINK]
 //[TODO]
 //[TOTEST]
@@ -95,6 +103,7 @@ public:
 			};
 
 		std::stringstream ss;
+		ss.clear();
 
 		//[TODO] how to check input string for validity with stringstream?
 
@@ -113,14 +122,35 @@ public:
 
 			std::string tmp_str{str_repr.substr(offset_from_left, count)};
 			ss << std::hex << tmp_str;
-			
-			// debug
-			std::cout << "ctor: tmp_str = " << tmp_str << '\n';
+		
+			// std::cout << "Reading ctor: tmp_str = " << tmp_str 
+			// 		<< ", tellg() = " << ss.tellg() 
+			// 		<< ", str_len = " << tmp_str.length() 
+			// 		<< ", ss.fail() = " << ss.fail() 
+			// 		<< '\n';
 
-			if(!(ss >> (*m_parr)[(str_payload_len-i)/hex_digs_in_one_storage_element]))
+			// I need tellg = -1, because when after extracting stream has smth left -> sets failbit -> tellg = -1
+			bool b_extracted = ss >> (*m_parr)[(str_payload_len-i)/hex_digs_in_one_storage_element];
+			bool b_characters_left_in_ss = ss.tellg()!=-1;
+
+			if(!b_extracted || b_characters_left_in_ss){
+				// debug
+				// std::cout << "Throw ctor: tmp_str = " << tmp_str 
+				// 	<< ", tellg() = " << ss.tellg() 
+				// 	<< ", str_len = " << tmp_str.length() 
+				// 	<< ", ss.fail() = " << ss.fail() 
+				// 	<< '\n';
+
 				throw std::runtime_error("BigInt invalid input");
+			}
 
 			ss.clear();
+			// debug
+				// std::cout << "Exiting ctor: tmp_str = " << tmp_str 
+				// 	<< ", tellg() = " << ss.tellg() 
+				// 	<< ", str_len = " << tmp_str.length() 
+				// 	<< ", ss.fail() = " << ss.fail() 
+				// 	<< '\n';
 
 		}
 	}
