@@ -18,10 +18,15 @@
 
 #include <functional>
 
+#include <unordered_map>
+
 template<typename _T, int _bitlength>
 class TestUtils{
 		
 public:	
+
+	// [!] need to update this as new operators are added to BigInt
+	static std::unordered_map<std::string, std::string> operators_url_encoded;
 
 	//constexpr size_t s{2048};
 	using test_big_int_t = BigInt<_T, _bitlength>;
@@ -139,7 +144,7 @@ public:
 		const OperandPtrWrapper<OP2_TYPE>& operand2_ptr,		//OP2_TYPE - BigInt<A, x> or int
 		const std::string& str_repr_of_operator,
 		const std::string& str_urlencoded_repr_of_operator,
-		std::function<OP1_TYPE(const OP1_TYPE*, OP2_TYPE)> operation_func) const
+		std::function<OP1_TYPE(const OP1_TYPE*, const OP2_TYPE&)> operation_func) const
 	{
 		std::string request_str_command = "curl -s -X POST -d 'eqn="
 			+ operand1.get_as_string(true,false) 
@@ -192,6 +197,33 @@ public:
 		}
 	}
 
+	static std::string url_encode_expr_string(std::string_view input){
+
+		// merge operator strs into one string for successive parsing
+		static std::string operatorsStrCombined{
+			[&operators_url_encoded]()->std::string{
+				std::string res{};
+		        for(const auto& el: operators_url_encoded)
+		            res += el.first;
+		        return res;
+			}()
+		}
+		for(auto i{input.find_first_of()})
+
+		return std::string{};
+	}
+
 };
+
+template<typename _T, int _bitlength>
+std::unordered_map<std::string, std::string> TestUtils<_T, _bitlength>::operators_url_encoded{{
+	{"(", "%28"},
+	{")", "%29"},
+	{"+", "%2B"},
+	{"-", "-"},
+	{"*", "*"},
+	{"/", "%2F"},
+	{"^", "%5E"}
+}};
 
 #endif

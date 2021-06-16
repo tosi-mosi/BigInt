@@ -12,7 +12,7 @@
 #include <iomanip> // for std::setfill("0")
 
 #ifdef DEBUG_BUILD
-#  define DEBUG(x) std::cerr << x << '\n';
+#  define DEBUG(x) std::cerr << x;
 #else
 #  define DEBUG(x) do {} while (0)
 #endif
@@ -143,8 +143,6 @@ public:
 
 				throw std::runtime_error("BigInt invalid input");
 			}
-
-			ss.clear();
 			// debug
 				// std::cout << "Exiting ctor: tmp_str = " << tmp_str 
 				// 	<< ", tellg() = " << ss.tellg() 

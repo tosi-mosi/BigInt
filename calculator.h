@@ -1,4 +1,5 @@
 #include "BigInt.h"
+#include <functional>
 #include <deque>
 #include <stack>
 
@@ -35,15 +36,7 @@ enum class OperatorAssociativity{
 	right
 };
 
-struct Operator{
-	const OperatorId id;
-	const std::string strRepr;
-	const OperatorPrecedence prec;
-	const OperatorAssociativity assoc;
 
-	// [?]
-	// const void* operator_func_ptr???
-};
 
 // [?] maybe I don't need this
 enum class IntegerType{
@@ -79,11 +72,25 @@ class Calculator{
 
 public:
 
+	struct Operator{
+		const OperatorId id;
+		const std::string strRepr;
+		const OperatorPrecedence prec;
+		const OperatorAssociativity assoc;
+
+		// [?]
+		const std::function<BI(const BI*, const BI&)> func;
+	};
+
 	static std::array<Operator, 7> mOperators;
 
 	// [?] could be bigInt / usual
 	struct Integer{
-		std::string_view mStrRepr; 				// it will be pointing to the original expression's string
+
+		// [?] can't use string_view here, 
+		// because for evaluate_postfix Integer has to own its mStrRepr
+		std::string mStrRepr; 				// it will be pointing to the original expression's string
+											// update: no it won't (cant use string_view)
 		BI mIntRepr;
 		Integer(std::string_view strRepr, BI intRepr):
 			mStrRepr{strRepr}, mIntRepr{intRepr} 
@@ -119,23 +126,64 @@ public:
 
 	static std::deque<Token> mTokens;
 
-	static bool calculate(std::string_view& expr){
-		// tokenize
-		// parse tokenized
-		if(!tokenize(expr))
-			return false;
+	// [?] maybe shall return Integer ?
+	static bool calculate(std::string input){
 
-		if(!parse_tokenized_expr())
-			return false;
+		try{
 
-		//calculate, return result
+			tokenize(input);
+			convert_infix_to_postfix_notation();
+			evaluate_postfix();
+
+        }catch(std::runtime_error& e){
+
+    		// [?] handle input validation exceptions here
+        	std::cout << "Aborting calculation. Reason: " << e.what() << '\n'; 
+        	return false;
+
+        }		
 
 	}
 
-	static bool parse_tokenized_expr() {
+	static Integer evaluate_postfix() {
 
-		
+		std::stack<Token> operand_stack;
 
+		for(auto it{mTokens.begin()}, end{mTokens.end()}; it!=end; ++it){
+
+			if(it->mTokenType == TokenType::integer)
+				operand_stack.push(*it);
+			else{
+
+				if(operand_stack.size() < 2)
+					throw std::runtime_error("invalid postfix notation expr");
+
+				Token rightOperand{ operand_stack.top() };
+				operand_stack.pop();
+				Token leftOperand{ operand_stack.top() };
+				operand_stack.pop();
+
+				BI subResult = it->mOp->func(&leftOperand.mInt->mIntRepr, rightOperand.mInt->mIntRepr);
+
+				operand_stack.emplace(
+					TokenType::integer,
+					nullptr, 
+					std::make_shared<Integer>("", subResult)
+				);
+			}
+		}
+
+		if(operand_stack.size() != 1)
+			throw std::runtime_error("invalid postfix notation expr");
+
+		// initialize strRepr for result
+		Integer exprResult{ *operand_stack.top().mInt };
+		exprResult.mStrRepr = exprResult.mIntRepr.get_as_string();
+
+		DEBUG("expr result = " << exprResult.mStrRepr);
+
+
+		return exprResult; 
 	}
 
 	// [?] When to validate expression (), maybe when we will be evaluating 
@@ -151,7 +199,31 @@ public:
 
 				result.push_back(*it);
 
-			}else if(it->mTokenType == TokenType::operatorr){
+			}else if(it->mTokenType == TokenType::operatorr && it->mOp->strRepr == "("){
+
+				operator_stack.push(*it);
+
+			}else if(it->mTokenType == TokenType::operatorr && it->mOp->strRepr == ")"){
+
+				// if not "(" then put it to the deque
+				while(true){
+					
+					if(operator_stack.empty())
+						return false;
+
+					Token operator_inside_parentheses{ operator_stack.top() };
+
+					if(operator_inside_parentheses.mOp->strRepr == "("){
+						operator_stack.pop();
+						break;
+					}
+
+					result.push_back(operator_inside_parentheses);
+					operator_stack.pop();
+				
+				}
+
+			}else{
 
 				if(!operator_stack.empty()){
 					
@@ -174,30 +246,8 @@ public:
 				
 				operator_stack.push(*it);
 
-			}else if(it->mTokenType == TokenType::operatorr && it->mOp->strRepr == "("){
-
-				operator_stack.push(*it);
-
-			}else if(it->mTokenType == TokenType::operatorr && it->mOp->strRepr == ")"){
-
-				// if not "(" then put it to the deque
-				while(true){
-					
-					if(operator_stack.empty())
-						return false;
-
-					Token operator_inside_parentheses{ operator_stack.top() };
-
-					if(operator_inside_parentheses.mOp->strRepr != "("){
-						operator_stack.pop();
-						break;
-					}
-
-					result.push_back(operator_inside_parentheses);
-					operator_stack.pop();
-				
-				}
 			}
+
 		}
 
 		// Popping the remaining items from operator stack to output queue
@@ -207,9 +257,12 @@ public:
 			operator_stack.pop();
 		}
 
-		DEBUG("end of convert\n");
-
 		mTokens = result;
+
+		DEBUG("postfix notation:")
+        for(auto& el: mTokens)
+        	DEBUG((el.mOp ? el.mOp->strRepr : el.mInt->mIntRepr.get_as_string()) << ' ');
+    	DEBUG('\n');
 
 		return true;
 	}
@@ -222,67 +275,61 @@ public:
 	}
 
 	// [?] should whitespaces be allowed?
-	static bool tokenize(std::string_view& expr) {
+	// [?] should it catch exceptions here?, 
+	// maybe somewhere higher on stack in one place handle all exceptions
+	static bool tokenize(std::string_view expr) {
 
 		// Initializing string that is a combination of strReprs of all operators: "+-/*"
 		// Need to initialize it only once -> that is why it is static local
 		static std::string operatorsCombined{ initializeOperationCombination() };
 
-        // handle BigInt ctor's exception (if invalid input)
-        try{
+    	for(auto it_a{expr.begin()}, end{expr.end()}; it_a!=end; ){
+    		
+    		DEBUG("index = " 
+    			<< it_a - expr.begin() 
+    			<< ", starts_with_operator = " 
+    			<< starts_with_operator(std::string_view{it_a, end-it_a})
+    			<< '\n');
 
-        	for(auto it_a{expr.begin()}, end{expr.end()}; it_a!=end; ){
-        		
-        		DEBUG("index = " 
-        			<< it_a - expr.begin() 
-        			<< ", starts_with_operator = " 
-        			<< starts_with_operator(std::string_view{it_a, end-it_a}));
-
-        		//operators are delimiters, ints are meaningful entities
-				if(auto operatorId = starts_with_operator(std::string_view{it_a, end-it_a}); operatorId != -1){
+    		//operators are delimiters, ints are meaningful entities
+			if(auto operatorId = starts_with_operator(std::string_view{it_a, end-it_a}); operatorId != -1){
+			
+				mTokens.emplace_back(
+					TokenType::operatorr, &mOperators[operatorId], nullptr
+				);
+				it_a += mOperators[operatorId].strRepr.length();
+			
+			}else{
+			
+				// end_of_number_index = (end of number - begining_of_number)
+				size_t number_end_index = expr.find_first_of(operatorsCombined, it_a-expr.begin());
 				
-					mTokens.push_back(
-						Token{ TokenType::operatorr, &mOperators[operatorId], nullptr }
-					);
-					it_a += mOperators[operatorId].strRepr.length();
+				DEBUG("br2) number_end_index = " << number_end_index << '\n');
 				
-				}else{
+				size_t number_str_length = (number_end_index == std::string::npos) ? end-it_a : number_end_index-(it_a-expr.begin());
 				
-					// end_of_number_index = (end of number - begining_of_number)
-					size_t number_end_index = expr.find_first_of(operatorsCombined, it_a-expr.begin());
-					
-					DEBUG("br2) number_end_index = " << number_end_index);
-					
-					size_t number_str_length = (number_end_index == std::string::npos) ? end-it_a : number_end_index-(it_a-expr.begin());
-					
-					DEBUG("br2) number_str_length = " << number_str_length);
+				DEBUG("br2) number_str_length = " << number_str_length << '\n');
 
-					std::string_view strRepr{ 
-						it_a,
-						number_str_length
-					};
+				std::string_view strRepr{ 
+					it_a,
+					number_str_length
+				};
 
 
-					BI intRepr{strRepr};
-					mTokens.push_back(
-						Token{ TokenType::integer, nullptr,  std::make_shared<Integer>(strRepr, intRepr) }
-					);
+				BI intRepr{strRepr};
+				mTokens.emplace_back(
+					TokenType::integer, nullptr,  std::make_shared<Integer>(strRepr, intRepr)
+				);
 
-					it_a += number_str_length;
-				}
-	        }
+				it_a += number_str_length;
+			}
+        }
 
-        }catch(std::runtime_error& e){
 
-    		// [?] handle input validation exceptions here
-        	std::cout << "Aborting calculation. Reason: " << e.what() << '\n'; 
-        	return false;
-
-        }		
-
+        DEBUG("tokens:\n")
         for(auto& el: mTokens)
-        	std::cout << (el.mOp ? el.mOp->strRepr : el.mInt->mIntRepr.get_as_string()) << ' ';
-    	std::cout << '\n'; 
+        	DEBUG((el.mOp ? el.mOp->strRepr : el.mInt->mIntRepr.get_as_string()) << ' ');
+    	DEBUG('\n');
 
         return true;
 	}
@@ -303,18 +350,18 @@ private:
 // won't lead to multiple definitions, because compiler makes sure 
 // that templates are instantiated only once
 template<typename BI>
-std::array<Operator, 7> Calculator<BI>::mOperators{ 
-	Operator{OperatorId::leftBracket, "(", OperatorPrecedence::none, OperatorAssociativity::none},
-	Operator{OperatorId::rightBracket, ")", OperatorPrecedence::none, OperatorAssociativity::none},
-	Operator{OperatorId::plus, "+", OperatorPrecedence::low, OperatorAssociativity::left},
-	Operator{OperatorId::minus, "-", OperatorPrecedence::low, OperatorAssociativity::left},
-	Operator{OperatorId::multiply, "*", OperatorPrecedence::medium, OperatorAssociativity::left},
-	Operator{OperatorId::divide, "/", OperatorPrecedence::medium, OperatorAssociativity::left},
+std::array<typename Calculator<BI>::Operator, 7> Calculator<BI>::mOperators{ 
+	Calculator<BI>::Operator{OperatorId::leftBracket, "(", OperatorPrecedence::none, OperatorAssociativity::none},
+	Calculator<BI>::Operator{OperatorId::rightBracket, ")", OperatorPrecedence::none, OperatorAssociativity::none},
+	Calculator<BI>::Operator{OperatorId::plus, "+", OperatorPrecedence::low, OperatorAssociativity::left, &BI::operator +},
+	Calculator<BI>::Operator{OperatorId::minus, "-", OperatorPrecedence::low, OperatorAssociativity::left, &BI::operator -},
+	Calculator<BI>::Operator{OperatorId::multiply, "*", OperatorPrecedence::medium, OperatorAssociativity::left, &BI::operator *},
+	Calculator<BI>::Operator{OperatorId::divide, "/", OperatorPrecedence::medium, OperatorAssociativity::left, &BI::operator /},
 	
 	// [?] ^ or **.
 	// ** -> could be problematic because there already is *
 	// ** -> when encountered * will have to make extra check
-	Operator{OperatorId::exponentiate, "^", OperatorPrecedence::high, OperatorAssociativity::right}
+	Calculator<BI>::Operator{OperatorId::exponentiate, "^", OperatorPrecedence::high, OperatorAssociativity::right, &BI::pow}
 };
 
 template<typename BI>
