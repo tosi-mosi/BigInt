@@ -1,7 +1,16 @@
+#ifndef CALCULATOR
+#define CALCULATOR
+
 #include "BigInt.h"
 #include <functional>
 #include <deque>
 #include <stack>
+
+#ifdef DEBUG_CALCULATOR
+#  define DEBUG(x) std::cerr << x;
+#else
+#  define DEBUG(x) do {} while (0)
+#endif
 
 enum class OperatorId{
 	
@@ -20,7 +29,7 @@ enum class OperatorId{
 	divide,
 	exponentiate
 
-	// [TODO] place for comparison ops
+	// [?] place for comparison ops
 };
 
 enum class OperatorPrecedence{
@@ -38,13 +47,13 @@ enum class OperatorAssociativity{
 
 
 
-// [?] maybe I don't need this
+// [?] maybe I won't need this
 enum class IntegerType{
 	decimal,
 	hexidemical
 };
 
-// [?] maybe I don't need it
+// [?] maybe I won't need it
 // need only BigInts and usual ints only when bitshift?
 enum class IntegerStorageType{
 	big, // if
@@ -63,10 +72,10 @@ enum class TokenType{
 //[TODO] after creating Calculator -> should test BigInts for memory leaks (Valgrind?)
 
 
-// Parses expression, starts operatoins
-// Tokenize?
-// convert to postfix with shunting yard alg
-// using stack? structure calculate result of postfix 
+// Parses expression and evaluates them by calling BigInt operators:
+// 1) Tokenize?
+// 2) convert to postfix with shunting yard alg
+// 3) evaluate expression from postfix notation
 template<typename BI>
 class Calculator{
 
@@ -82,15 +91,18 @@ public:
 		const std::function<BI(const BI*, const BI&)> func;
 	};
 
-	static std::array<Operator, 7> mOperators;
+	static std::vector<Operator> mOperators;
 
 	// [?] could be bigInt / usual
-	struct Integer{
+	class Integer{
+
+	public:
 
 		// [?] can't use string_view here, 
 		// because for evaluate_postfix Integer has to own its mStrRepr
 		std::string mStrRepr; 				// it will be pointing to the original expression's string
-											// update: no it won't (cant use string_view)
+											//  update: no it won't 
+											//   (cant use string_view, because it is necessary for Integer to own )
 		BI mIntRepr;
 		Integer(std::string_view strRepr, BI intRepr):
 			mStrRepr{strRepr}, mIntRepr{intRepr} 
@@ -102,13 +114,13 @@ public:
 	// [?] should it be public?
 	public:
 
-		TokenType mTokenType; 					// operator or identifier
+		TokenType mTokenType; 					// operator or integer
 
 		Operator* mOp; 							// if token is operator,
 												//	this will be a ptr to corresponding operator obj,
 												// 	 nullptr otherwise
 		
-		std::shared_ptr<Integer> mInt;			// unique_ptr here?
+		std::shared_ptr<Integer> mInt;			// same here, but with Integer
 
 		Token(TokenType tokenType, Operator* op, std::shared_ptr<Integer> inte) :
 			mTokenType{ tokenType },
@@ -116,34 +128,20 @@ public:
 			mInt{ inte }
 		{}
 
-		// Token(const Token& to_be_copied) :
-		// 	mTokenType{ to_be_copied.mTokenType },
-		// 	mOp{ to_be_copied.mOp},					// shallow copy suffices
-		// 	mInt{  }		// need deep copy here, no way around
-		// {}
-
 	};
 
 	static std::deque<Token> mTokens;
 
 	// [?] maybe shall return Integer ?
-	static bool calculate(std::string input){
+	static std::string calculate(std::string input){
 
-		try{
-
-			tokenize(input);
-			convert_infix_to_postfix_notation();
-			evaluate_postfix();
-
-        }catch(std::runtime_error& e){
-
-    		// [?] handle input validation exceptions here
-        	std::cout << "Aborting calculation. Reason: " << e.what() << '\n'; 
-        	return false;
-
-        }		
+		tokenize(input);
+		convert_infix_to_postfix_notation();
+		return evaluate_postfix().mIntRepr.get_as_string();
 
 	}
+
+private:
 
 	static Integer evaluate_postfix() {
 
@@ -182,6 +180,7 @@ public:
 
 		DEBUG("expr result = " << exprResult.mStrRepr);
 
+		mTokens.clear();
 
 		return exprResult; 
 	}
@@ -199,11 +198,11 @@ public:
 
 				result.push_back(*it);
 
-			}else if(it->mTokenType == TokenType::operatorr && it->mOp->strRepr == "("){
+			}else if(it->mOp->strRepr == "("){
 
 				operator_stack.push(*it);
 
-			}else if(it->mTokenType == TokenType::operatorr && it->mOp->strRepr == ")"){
+			}else if(it->mOp->strRepr == ")"){
 
 				// if not "(" then put it to the deque
 				while(true){
@@ -228,13 +227,15 @@ public:
 				if(!operator_stack.empty()){
 					
 					Token* top_el{};
+
+					// decide whether to pop operators from stack, before pushing current operator on to it(depends on precedence and associativity):
 					while(
-						!operator_stack.empty() 				// check if stack is not empty
-						&& (top_el = &operator_stack.top())		// read top element
-						&& top_el->mOp->strRepr != "("
+						!operator_stack.empty() 																				// check if stack is not empty
+						&& (top_el = &operator_stack.top())																		// read top element(can't be nullptr here)
+						&& top_el->mOp->strRepr != "("																			// it shouldn't be left parentheses
 						&& (
-							top_el->mOp->prec > it->mOp->prec 
-							|| (top_el->mOp->prec == it->mOp->prec && top_el->mOp->assoc == OperatorAssociativity::left)
+							top_el->mOp->prec > it->mOp->prec 																	// if in stack operator's precedence is higher
+							|| (top_el->mOp->prec == it->mOp->prec && top_el->mOp->assoc == OperatorAssociativity::left)		// if current in stack operator == current operator, and they are left associative
 						)
 					){
 
@@ -259,7 +260,7 @@ public:
 
 		mTokens = result;
 
-		DEBUG("postfix notation:")
+		DEBUG("postfix notation:");
         for(auto& el: mTokens)
         	DEBUG((el.mOp ? el.mOp->strRepr : el.mInt->mIntRepr.get_as_string()) << ' ');
     	DEBUG('\n');
@@ -325,8 +326,7 @@ public:
 			}
         }
 
-
-        DEBUG("tokens:\n")
+        DEBUG("tokens:\n");
         for(auto& el: mTokens)
         	DEBUG((el.mOp ? el.mOp->strRepr : el.mInt->mIntRepr.get_as_string()) << ' ');
     	DEBUG('\n');
@@ -334,7 +334,6 @@ public:
         return true;
 	}
 
-private:
 	// on success -> return operator's index in mOperators
 	// on failure -> return -1
 	static int starts_with_operator(std::string_view str){
@@ -350,7 +349,7 @@ private:
 // won't lead to multiple definitions, because compiler makes sure 
 // that templates are instantiated only once
 template<typename BI>
-std::array<typename Calculator<BI>::Operator, 7> Calculator<BI>::mOperators{ 
+std::vector<typename Calculator<BI>::Operator> Calculator<BI>::mOperators{ 
 	Calculator<BI>::Operator{OperatorId::leftBracket, "(", OperatorPrecedence::none, OperatorAssociativity::none},
 	Calculator<BI>::Operator{OperatorId::rightBracket, ")", OperatorPrecedence::none, OperatorAssociativity::none},
 	Calculator<BI>::Operator{OperatorId::plus, "+", OperatorPrecedence::low, OperatorAssociativity::left, &BI::operator +},
@@ -366,3 +365,5 @@ std::array<typename Calculator<BI>::Operator, 7> Calculator<BI>::mOperators{
 
 template<typename BI>
 std::deque<typename Calculator<BI>::Token> Calculator<BI>::mTokens{};
+
+#endif

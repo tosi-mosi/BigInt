@@ -1,33 +1,28 @@
 #include "BigInt.h"
 
+using test_big_int_t = BigInt<unsigned int, 2048>;
 
 // [!] instantiate template BigInt<unsigned int, 2048>
-// so I can populate mOperators with BigInt<...> functions
+// so I can populate mOperators in calculator.h with BigInt<...> functions
 template class BigInt<unsigned int, 2048>; 
 
 #include "calculator.h"
 
 #include "TestUtils.h"
 
+using test_utils_t = TestUtils<unsigned int, 2048>;
+
 int main(){
 
+	auto test_cases = std::vector<std::string>{{
+		"0x2284/0x5+0x1235+0x12555+(0x2*(0x3+0x3))+0x12315125*(0x1+0x3^0x5541)*0x51871^0x151513^413", // good
+		"0x1231515^0x11+((0x458727592876987fa52+0x411235)*0x516)^0x3",
+		"0x15299285292859285",
 
-	std::string_view sv{};
+	}};
 
-	// DEBUG("hello" << 2);
-
-	BigInt<unsigned int, 2048> bi{"0x2284"};
-
-	std::string input{"0x1+(0x2+0x3))()fasf(+0x4*0x5"};
-	// //Calculator<BigInt<unsigned int, 2048>>::tokenize(input);
-
-	input = "0x2284/0x5+1235+12555+(2*(3+3))+0x12315125*(1+3)";
-	// Calculator<BigInt<unsigned int, 2048>>::tokenize(input);
-	// // DEBUG("between tokenize and convert\n");
-	// Calculator<BigInt<unsigned int, 2048>>::convert_infix_to_postfix_notation();
-	// Calculator<BigInt<unsigned int, 2048>>::evaluate_postfix();
-	Calculator<BigInt<unsigned int, 2048>>::calculate(input);
-
-
+	for(auto& el: test_cases)
+		test_utils_t::check_compound_expression(el);
+	
 
 }

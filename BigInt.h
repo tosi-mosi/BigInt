@@ -11,24 +11,20 @@
 
 #include <iomanip> // for std::setfill("0")
 
-#ifdef DEBUG_BUILD
+#ifdef DEBUG_BIG_INT
 #  define DEBUG(x) std::cerr << x;
 #else
 #  define DEBUG(x) do {} while (0)
 #endif
 
-// [?][solved] BUG: fasf -> it reads without throwing exception - not what I want
+// [+][-][+][solved] BUG: fasf -> it reads without throwing exception - not what I want
 
-//[TOTHINK]
-//[TODO]
-//[TOTEST]
+// [?] add noexcepts to functions and ctors ?
+//  need to revise how they work
 
-//[TOTHINK] add noexcepts to functions and ctors ?
-//need to revise how they work
+// [?] maybe use move_if_no_except() in move ctor/assignment ?
 
-//[TOTHINK] maybe use move_if_no_except() in move ctor/assignment ?
-
-//[TOTHINK] STORAGE_TYPE should be unsigned
+// [?] STORAGE_TYPE should be unsigned
 template<typename _STORAGE_TYPE, int _bit_length>
 class BigInt{
 
@@ -50,7 +46,7 @@ public:
 private:
 
 	// not making member std::array directly, because big array obj would take up a lot of stack space,
-	// since it's just a wrapper over T[N].
+	//  since it's just a wrapper over T[N].
 	std::unique_ptr<std::array<STORAGE_TYPE, StorageNum>> m_parr;
 
 	enum class ComparisonOption{
@@ -89,8 +85,8 @@ public:
 			}
 		}
 
-		//check ranges
-		//size in bytes = 2 * number of hex digits
+		// check ranges
+		// size in bytes = 2 * number of hex digits
 		auto str_payload_len = str_repr.length();
 		auto hex_digs_in_one_storage_element = 2 * StorageSize;
 		auto max_hex_digits_in_general = hex_digs_in_one_storage_element * StorageNum;
@@ -103,7 +99,6 @@ public:
 			};
 
 		std::stringstream ss;
-		ss.clear();
 
 		//[TODO] how to check input string for validity with stringstream?
 
@@ -122,40 +117,23 @@ public:
 
 			std::string tmp_str{str_repr.substr(offset_from_left, count)};
 			ss << std::hex << tmp_str;
-		
-			// std::cout << "Reading ctor: tmp_str = " << tmp_str 
-			// 		<< ", tellg() = " << ss.tellg() 
-			// 		<< ", str_len = " << tmp_str.length() 
-			// 		<< ", ss.fail() = " << ss.fail() 
-			// 		<< '\n';
 
 			// I need tellg = -1, because when after extracting stream has smth left -> sets failbit -> tellg = -1
 			bool b_extracted = ss >> (*m_parr)[(str_payload_len-i)/hex_digs_in_one_storage_element];
 			bool b_characters_left_in_ss = ss.tellg()!=-1;
 
 			if(!b_extracted || b_characters_left_in_ss){
-				// debug
-				// std::cout << "Throw ctor: tmp_str = " << tmp_str 
-				// 	<< ", tellg() = " << ss.tellg() 
-				// 	<< ", str_len = " << tmp_str.length() 
-				// 	<< ", ss.fail() = " << ss.fail() 
-				// 	<< '\n';
-
-				throw std::runtime_error("BigInt invalid input");
+				DEBUG("b_extracted = " << b_extracted << ", b_chars_lef_in_ss = " << b_characters_left_in_ss << '\n');
+				throw std::runtime_error(std::string{"BigInt invalid input "} + tmp_str);
 			}
-			// debug
-				// std::cout << "Exiting ctor: tmp_str = " << tmp_str 
-				// 	<< ", tellg() = " << ss.tellg() 
-				// 	<< ", str_len = " << tmp_str.length() 
-				// 	<< ", ss.fail() = " << ss.fail() 
-				// 	<< '\n';
 
+			ss.clear();
 		}
 	}
 
-	//copy ctors
-	//copies will be done with copy ctor 
-	//-> less performant than move, but still allows copying, which is cool I guess
+	// copy ctors
+	//  copies will be done with copy ctor 
+	//   -> less performant than move, but still allows copying, which is cool I guess
 	BigInt(const BigInt& to_be_copied): 
 		m_parr{std::make_unique< std::array<STORAGE_TYPE, StorageNum> >(*to_be_copied.m_parr)}
 	{}
@@ -172,10 +150,10 @@ public:
 		return *this;
 	}
 
-	//move ctors
-	//I should implement move semantics,
-	//returning from generator functions will be done with move 
-	//-> boost in performance
+	// move ctors
+	//  I should implement move semantics,
+	//   returning from generator functions will be done with move 
+	//    -> boost in performance
 	BigInt(BigInt&& to_be_stolen_from): 
 		m_parr(std::move(to_be_stolen_from.m_parr))
 	{}
@@ -214,6 +192,7 @@ public:
 		return result;
 	}
 
+	// [?] will I need this?
 	// BigInt operator >> (const BigInt& operand) const {
 
 	// 	// result is the same as 
@@ -250,10 +229,10 @@ public:
 
 		for(auto i{0}; i<BigInt::StorageNum; ++i){
 			
-			//check_for_wraparound, if wraparound happened -> carry = 1
+			// check_for_wraparound, if wraparound happened -> carry = 1
 			if((i != BigInt::StorageNum-1)){
 				if(
-					((*rhs.m_parr)[i]==max_el_value && (*result.m_parr)[i] == 1) //(*rhs.m_parr)[i] + (*result.m_parr)[i]) may wrap around, so check if it wraps here, if it wraps -> then carry = 1 automatically
+					((*rhs.m_parr)[i]==max_el_value && (*result.m_parr)[i] == 1) 					// (*rhs.m_parr)[i] + (*result.m_parr)[i]) may wrap around, so check if it wraps here, if it wraps -> then carry = 1 automatically
 					|| ( (max_el_value - (*m_parr)[i] < (*rhs.m_parr)[i] + (*result.m_parr)[i]) )
 				)
 					(*result.m_parr)[i+1] += 1;
@@ -276,7 +255,7 @@ public:
 
 			carry = 0;
 
-			//check_for_wraparound, if wraparound happened -> carry = 1
+			// check_for_wraparound, if wraparound happened -> carry = 1
 			if(i != StorageNum-1)
 				if(
 					((*rhs.m_parr)[i] == max_el_value && carry == 1)
@@ -288,9 +267,9 @@ public:
 		return result;
 	}
 
-	//use halves of StorageType
-	//because havle * havle fits in whole StorageType 
-	//but whole * whole - doesn't
+	// use halves of StorageType
+	//  because havle * havle fits in whole StorageType 
+	//   but whole * whole - doesn't
 	BigInt operator * (const BigInt& rhs) const {
 		
 		BigInt result{};		
@@ -300,11 +279,11 @@ public:
 
 		for(auto i{0}; i<StorageNum*2; ++i){
 
-			//iterate over every half-element
+			// iterate over every half-element
 			STORAGE_TYPE carry{0};
 			for(int j{0}; j<StorageNum*2; ++j){
 
-				//condition, j+i < storagenum*2 -> skip everything
+				// condition, j+i < storagenum*2 -> skip everything
 				if(i+j < StorageNum*2){
 
 					tmp =( i%2 == 0 ? ((*m_parr)[i/2] & ls_half_mask) : ((*m_parr)[i/2] >> half_bitsize_of_storage_type) )
@@ -326,14 +305,15 @@ public:
 	}
 
 private:
-	//need this in division
+	// need this 2 functions for division:
+
 	void set_bit(int bit_index) {
 		if(bit_index >= max_bit_length)
 			return;
 		(*m_parr)[bit_index/storage_el_bit_length] |= STORAGE_TYPE{1} << (bit_index%storage_el_bit_length);
 	}
 
-	//linear search
+	// linear search for index of MSB
 	unsigned int get_payload_bit_length() const {
 		for(int i{StorageNum-1}; i>=0; --i)
 			if((*m_parr)[i]!=0)
@@ -347,7 +327,7 @@ public:
 
 	std::array<BigInt, 2> division(const BigInt& rhs) const { 
 		
-		//[TOTHINK]handle zero division, or maybe there is no point
+		// [?]handle zero division, or maybe there is no point
 		BigInt quotient{};
 		BigInt remainder{*this};
 		int k = rhs.get_payload_bit_length();
@@ -377,17 +357,24 @@ public:
 	}
 
 	bool get_bit(unsigned int bit_index) const {
-		return ((*m_parr)[bit_index/max_bit_length] & (STORAGE_TYPE{1}<<(bit_index%max_bit_length))) != 0;
+		return ((*m_parr)[bit_index/storage_el_bit_length] & (STORAGE_TYPE{1}<<(bit_index%storage_el_bit_length))) != 0;
 	}
 
 	BigInt pow(const BigInt& exp) const {
 		BigInt result{"1"};
 
-		for(int i{exp.get_payload_bit_length()-1}; i>0; --i){
-			if(exp.get_bit(i)) 
-				result = result * (*this);
+		// DEBUG("mantissa = " << this->get_as_string(false, true) << "\n exp = " << exp.get_as_string(false, true) << '\n');
+
+		// DEBUG("bitlength = " << exp.get_payload_bit_length() << '\n');
+
+		for(int i{exp.get_payload_bit_length()-1}; i>=0; --i){
+			if(exp.get_bit(i)){
+				result = result * (*this); 
+				// DEBUG("res after * mantisa: " << result.get_as_string() << '\n');
+			}
 			if(i != 0)
 				result = result * result;
+			// DEBUG("res after ^2: " << result.get_as_string() << '\n');
 		}
 
 		return result;
@@ -407,8 +394,8 @@ private:
 
 public:
 
-	//[TODO] test comparison functions:
-	//since defuse.sa has no >,=,< ... -> utilize "-" operation -> minus sign as indicator
+	// [?][TODO] test comparison functions:
+	// since defuse.sa has no >,=,< ... -> utilize "-" operation -> minus sign as indicator
 	bool operator > (const BigInt& rhs) const {
 		return comparison_helper(rhs) == ComparisonOption::greater ? true : false;
 	}
@@ -450,8 +437,9 @@ public:
 			leading_zeros = *it != 0 ? false : leading_zeros;
 
 			if(!leading_zeros){
-				//if it is the most significant element, dont prepend zeros,
-				//prepend otherwise
+
+				// if it is the most significant element, dont prepend zeros,
+				// prepend otherwise
 				if(!first_encountered){
 					first_encountered = true;
 					ss << std::hex << *it;
@@ -468,8 +456,9 @@ public:
 		return (result.empty() || result == "0x") ? result+="0" : result;
 	}
 
-	// template<typename BIG_INT, int size>
-	// friend std::unique_ptr<std::array<BIG_INT, size>> generate_array();
+	// [!] need to make TestUtils friend -> 
+	//  so that it can generate_test_data_vec
+	//   (test_data_vec writes into private member of BigInt)
 	template<typename _U, int __bit_length> friend class TestUtils;
 
 };

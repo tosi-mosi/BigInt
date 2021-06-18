@@ -4,15 +4,15 @@
 
 using test_utils_t = TestUtils<unsigned int, 2048>;
 
-void test_right_shift(auto& test_parr, test_utils_t& testUtils){
+void test_right_shift(const auto& test_arr, test_utils_t& testUtils){
 	
 	std::cout << "\tTesting >>:\n";
 
-	for(const auto& el: *test_parr){	
+	for(const auto& el: test_arr){	
 
 		auto shift{ testUtils.generate_number()%test_utils_t::test_big_int_t::max_bit_length };
 
-		testUtils.check_binary_operation<test_utils_t::test_big_int_t, int>(
+		test_utils_t::check_binary_operation<test_utils_t::test_big_int_t, int>(
 			el,
 			shift,
 			">>",
@@ -23,16 +23,16 @@ void test_right_shift(auto& test_parr, test_utils_t& testUtils){
 	}
 }
 
-void test_left_shift(auto& test_parr, test_utils_t& testUtils){
+void test_left_shift(const auto& test_arr, test_utils_t& testUtils){
 	
 	std::cout << "\tTesting <<:\n";
 
 	// auto check left shift
-	for(const auto& el: *test_parr){
+	for(const auto& el: test_arr){
 	
 		auto shift{ testUtils.generate_number()%test_utils_t::test_big_int_t::max_bit_length };
 	
-		testUtils.check_binary_operation<test_utils_t::test_big_int_t, int>(
+		test_utils_t::check_binary_operation<test_utils_t::test_big_int_t, int>(
 			el,
 			shift,
 			"<<",
@@ -43,13 +43,13 @@ void test_left_shift(auto& test_parr, test_utils_t& testUtils){
 	}
 }
 
-void test_addition(auto& test_parr, test_utils_t& testUtils){
+void test_addition(const auto& test_arr){
 
 	std::cout << "\tTesting addition:\n";
 
-	//go from both ends of the array converging at the middle
-	for(auto l_to_r{(*test_parr).begin()}, r_to_l{(*test_parr).end()-1}; l_to_r <= r_to_l; ++l_to_r, --r_to_l){
-		testUtils.check_binary_operation<test_utils_t::test_big_int_t, test_utils_t::test_big_int_t>(
+	// go from both ends of the array converging at the middle
+	for(auto l_to_r{(test_arr).begin()}, r_to_l{(test_arr).end()-1}; l_to_r <= r_to_l; ++l_to_r, --r_to_l){
+		test_utils_t::check_binary_operation<test_utils_t::test_big_int_t, test_utils_t::test_big_int_t>(
 			*l_to_r,
 			*r_to_l,
 			"+",
@@ -60,13 +60,13 @@ void test_addition(auto& test_parr, test_utils_t& testUtils){
 	}	
 }
 
-void test_subtraction(auto& test_parr, test_utils_t& testUtils){
+void test_subtraction(const auto& test_arr){
 
 	std::cout << "\tTesting subtraction:\n";
 
-	for(auto l_to_r{(*test_parr).begin()}, r_to_l{(*test_parr).end()-1}; l_to_r <= r_to_l; ++l_to_r, --r_to_l){
+	for(auto l_to_r{(test_arr).begin()}, r_to_l{(test_arr).end()-1}; l_to_r <= r_to_l; ++l_to_r, --r_to_l){
 		
-		test_utils_t::test_big_int_t *smaller_ptr, *greater_ptr;
+		const test_utils_t::test_big_int_t *smaller_ptr, *greater_ptr;
 
 	 	// defuse.ca's - works with signed arithmetic, my - doesnt, so if a<b -> just swap them
 		if(*l_to_r > *r_to_l)
@@ -74,7 +74,7 @@ void test_subtraction(auto& test_parr, test_utils_t& testUtils){
 		else
 			smaller_ptr = &(*l_to_r), greater_ptr = &(*r_to_l);
 
-		testUtils.check_binary_operation<test_utils_t::test_big_int_t, test_utils_t::test_big_int_t>(
+		test_utils_t::check_binary_operation<test_utils_t::test_big_int_t, test_utils_t::test_big_int_t>(
 			*greater_ptr,
 			*smaller_ptr,
 			"-",
@@ -85,13 +85,13 @@ void test_subtraction(auto& test_parr, test_utils_t& testUtils){
 	}	
 }
 
-void test_multiplication(auto& test_parr, test_utils_t& testUtils){
+void test_multiplication(const auto& test_arr){
 	
 	std::cout << "\tTesting multiplication:\n";
 
-	for(auto l_to_r{(*test_parr).begin()}, r_to_l{(*test_parr).end()-1}; l_to_r <= r_to_l; ++l_to_r, --r_to_l){
+	for(auto l_to_r{(test_arr).begin()}, r_to_l{(test_arr).end()-1}; l_to_r <= r_to_l; ++l_to_r, --r_to_l){
 
-		testUtils.check_binary_operation<test_utils_t::test_big_int_t, test_utils_t::test_big_int_t>(
+		test_utils_t::check_binary_operation<test_utils_t::test_big_int_t, test_utils_t::test_big_int_t>(
 			*l_to_r,
 			*r_to_l,
 			"*",
@@ -102,20 +102,20 @@ void test_multiplication(auto& test_parr, test_utils_t& testUtils){
 	}	 
 }
 
-void test_division(auto& test_parr, test_utils_t& testUtils){
+void test_division(const auto& test_arr){
 
 	std::cout << "\tTesting division:\n";
 
-	for(auto l_to_r{(*test_parr).begin()}, r_to_l{(*test_parr).end()-1}; l_to_r <= r_to_l; ++l_to_r, --r_to_l){
+	for(auto l_to_r{(test_arr).begin()}, r_to_l{(test_arr).end()-1}; l_to_r <= r_to_l; ++l_to_r, --r_to_l){
 		
-		test_utils_t::test_big_int_t *smaller_ptr, *greater_ptr;
+		const test_utils_t::test_big_int_t *smaller_ptr, *greater_ptr;
 
 		if(*l_to_r > *r_to_l)
 			greater_ptr = &(*l_to_r), smaller_ptr = &(*r_to_l);
 		else
 			smaller_ptr = &(*l_to_r), greater_ptr = &(*r_to_l);
 
-		testUtils.check_binary_operation<test_utils_t::test_big_int_t, test_utils_t::test_big_int_t>(
+		test_utils_t::check_binary_operation<test_utils_t::test_big_int_t, test_utils_t::test_big_int_t>(
 			*greater_ptr,
 			*smaller_ptr,
 			"/",
@@ -126,13 +126,14 @@ void test_division(auto& test_parr, test_utils_t& testUtils){
 	}	
 }
 
-void test_exponentation(auto& test_parr, test_utils_t& testUtils){
+// can test this with python
+void test_exponentation(const auto& test_arr){
 
 	std::cout << "\tTesting exponentation:\n";
 
-	for(auto l_to_r{(*test_parr).begin()}, r_to_l{(*test_parr).end()-1}; l_to_r <= r_to_l; ++l_to_r, --r_to_l){
+	for(auto l_to_r{(test_arr).begin()}, r_to_l{(test_arr).end()-1}; l_to_r <= r_to_l; ++l_to_r, --r_to_l){
 
-		testUtils.check_binary_operation<test_utils_t::test_big_int_t, test_utils_t::test_big_int_t>(
+		test_utils_t::check_binary_operation<test_utils_t::test_big_int_t, test_utils_t::test_big_int_t>(
 			*l_to_r,
 			*r_to_l,
 			"^",
@@ -145,24 +146,28 @@ void test_exponentation(auto& test_parr, test_utils_t& testUtils){
 
 int main(){
 
-	test_utils_t test_utils{123};
+	test_utils_t test_utils{};
 
 	std::cout << "size of BigInt::STORAGE_TYPE = " << sizeof(test_utils_t::test_big_int_t::STORAGE_TYPE) << '\n';
 
-	test_utils_t::test_big_int_t a{"0x123452222222222;67812345678"};
-	std::cout << a.get_as_string() << '\n';
+	auto test_data_vec{
+		test_utils.generate_test_data_vec<test_utils_t::test_big_int_t>(10)
+	};
 
-	// auto test_parr{
-	// 	test_utils.generate_array<test_utils_t::test_big_int_t, 5>()
-	// };
 
-	// test_right_shift(test_parr, test_utils);
-	// test_left_shift(test_parr, test_utils);
-	// test_addition(test_parr, test_utils);
-	// test_subtraction(test_parr, test_utils);
-	// test_multiplication(test_parr, test_utils);
-	// test_division(test_parr, test_utils);
-	// test_exponentation(test_parr, test_utils);
+	// for(auto l_to_r{(test_data_vec).begin()}, r_to_l{(test_data_vec).end()-1}; l_to_r <= r_to_l; ++l_to_r, --r_to_l){
+
+	// 	std::cout << l_to_r->pow(*r_to_l).get_as_string() << "\n\n";
+
+	// }
+
+	test_right_shift(test_data_vec, test_utils);
+	test_left_shift(test_data_vec, test_utils);
+	test_addition(test_data_vec);
+	test_subtraction(test_data_vec);
+	test_multiplication(test_data_vec);
+	test_division(test_data_vec);
+	test_exponentation(test_data_vec);
 
 
 
