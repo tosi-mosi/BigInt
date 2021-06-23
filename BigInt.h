@@ -87,7 +87,7 @@ public:
 
 		// check ranges
 		// size in bytes = 2 * number of hex digits
-		auto str_payload_len = str_repr.length();
+		int str_payload_len = str_repr.length();
 		auto hex_digs_in_one_storage_element = 2 * StorageSize;
 		auto max_hex_digits_in_general = hex_digs_in_one_storage_element * StorageNum;
 		if(str_payload_len > max_hex_digits_in_general)
@@ -119,7 +119,7 @@ public:
 			ss << std::hex << tmp_str;
 
 			// I need tellg = -1, because when after extracting stream has smth left -> sets failbit -> tellg = -1
-			bool b_extracted = ss >> (*m_parr)[(str_payload_len-i)/hex_digs_in_one_storage_element];
+			bool b_extracted = static_cast<bool>(ss >> (*m_parr)[(str_payload_len-i)/hex_digs_in_one_storage_element]);
 			bool b_characters_left_in_ss = ss.tellg()!=-1;
 
 			if(!b_extracted || b_characters_left_in_ss){
@@ -367,7 +367,7 @@ public:
 
 		// DEBUG("bitlength = " << exp.get_payload_bit_length() << '\n');
 
-		for(int i{exp.get_payload_bit_length()-1}; i>=0; --i){
+		for(int i = exp.get_payload_bit_length()-1; i>=0; --i){
 			if(exp.get_bit(i)){
 				result = result * (*this); 
 				// DEBUG("res after * mantisa: " << result.get_as_string() << '\n');

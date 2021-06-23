@@ -293,7 +293,7 @@ private:
     			<< '\n');
 
     		//operators are delimiters, ints are meaningful entities
-			if(auto operatorId = starts_with_operator(std::string_view{it_a, end-it_a}); operatorId != -1){
+			if(int operatorId = starts_with_operator(std::string_view(it_a, end-it_a)); operatorId != -1){
 			
 				mTokens.emplace_back(
 					TokenType::operatorr, &mOperators[operatorId], nullptr

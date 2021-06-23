@@ -192,7 +192,10 @@ public:
 		// merge operator strReprs into one string,
 		// so that it can be used in string::find_first_of
 		static std::string operatorsStrCombined{
-			[&operators_url_encoded]()->std::string{
+			// no need to capture operators_url_encoded,
+			//  because it is of static-storage duration
+			//   so it will be captured automatically
+			[]()->std::string{
 				std::string res{};
 		        for(const auto& el: operators_url_encoded)
 		            res += el.first;
