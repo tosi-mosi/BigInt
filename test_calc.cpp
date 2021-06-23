@@ -1,4 +1,4 @@
-#include "BigInt.h"
+#include "big_int.h"
 
 using test_big_int_t = BigInt<unsigned int, 2048>;
 
@@ -8,7 +8,7 @@ template class BigInt<unsigned int, 2048>;
 
 #include "calculator.h"
 
-#include "TestUtils.h"
+#include "test_utils.h"
 
 using test_utils_t = TestUtils<unsigned int, 2048>;
 

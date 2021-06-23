@@ -2,7 +2,7 @@
 #ifndef UTILS_FOR_TESTING
 #define UTILS_FOR_TESTING
 
-#include "BigInt.h"
+#include "big_int.h"
 #include "calculator.h"
 #include <iostream>
 

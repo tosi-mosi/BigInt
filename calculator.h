@@ -1,7 +1,7 @@
 #ifndef CALCULATOR
 #define CALCULATOR
 
-#include "BigInt.h"
+#include "big_int.h"
 #include <functional>
 #include <deque>
 #include <stack>

@@ -1,6 +1,6 @@
 
-#include "BigInt.h"
-#include "TestUtils.h"
+#include "big_int.h"
+#include "test_utils.h"
 
 using test_utils_t = TestUtils<unsigned int, 2048>;
 
