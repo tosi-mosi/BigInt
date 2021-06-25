@@ -23,7 +23,6 @@ int main(){
 
 	for(auto& el: test_cases)
 		test_utils_t::check_compound_expression(el);
-	
 
 }
 

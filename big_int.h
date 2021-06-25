@@ -328,6 +328,9 @@ public:
 	std::array<BigInt, 2> division(const BigInt& rhs) const { 
 		
 		// [?]handle zero division, or maybe there is no point
+		if(rhs.get_payload_bit_length() == 0)
+			throw std::runtime_error(std::string{"BigInt zero division"});
+
 		BigInt quotient{};
 		BigInt remainder{*this};
 		int k = rhs.get_payload_bit_length();

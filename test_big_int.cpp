@@ -161,14 +161,15 @@ int main(){
 
 	// }
 
-	test_right_shift(test_data_vec, test_utils);
-	test_left_shift(test_data_vec, test_utils);
-	test_addition(test_data_vec);
-	test_subtraction(test_data_vec);
-	test_multiplication(test_data_vec);
-	test_division(test_data_vec);
-	test_exponentation(test_data_vec);
+	// test_right_shift(test_data_vec, test_utils);
+	// test_left_shift(test_data_vec, test_utils);
+	// test_addition(test_data_vec);
+	// test_subtraction(test_data_vec);
+	// test_multiplication(test_data_vec);
+	// test_division(test_data_vec);
+	// test_exponentation(test_data_vec);
 
+	test_utils_t::test_big_int_t{"0x12345"}/test_utils_t::test_big_int_t{"0x0"};
 
 
 }
