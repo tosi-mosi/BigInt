@@ -137,7 +137,7 @@ public:
 
 		tokenize(input);
 		convert_infix_to_postfix_notation();
-		return evaluate_postfix().mIntRepr.get_as_string();
+		return evaluate_postfix().mIntRepr.get_as_string(true, false);
 
 	}
 
