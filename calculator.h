@@ -130,8 +130,11 @@ public:
 
 	};
 
+private:
+
 	static std::deque<Token> mTokens;
 
+public:
 	// [?] maybe shall return Integer ?
 	static std::string calculate(std::string input){
 
