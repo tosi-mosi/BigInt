@@ -135,6 +135,9 @@ private:
 	static std::deque<Token> mTokens;
 
 public:
+
+	Calculator() = delete;
+
 	// [?] maybe shall return Integer ?
 	static std::string calculate(std::string input){
 
