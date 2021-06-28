@@ -1,3 +1,5 @@
 *.txt
 *.[ao]
-test
+*.out
+test_calc
+test_big_int
